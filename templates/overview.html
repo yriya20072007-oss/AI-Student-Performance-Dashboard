@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+
+{% block title %}Overview - Student Performance Classifier{% endblock %}
+{% block breadcrumb %}Overview{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Dataset Overview</h1>
+  <div class="page-subtitle">Summary metrics and target grade distribution from 2,392 student records.</div>
+</div>
+
+<!-- Stat Cards Row -->
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-label">Students</div>
+    <div class="stat-value">{{ stats.total_students }}</div>
+    <div class="stat-meta">Total observations</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-label">Features</div>
+    <div class="stat-value">{{ stats.num_features }}</div>
+    <div class="stat-meta">Excluding ID and GPA</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-label">Avg. GPA</div>
+    <div class="stat-value">{{ stats.avg_gpa }}</div>
+    <div class="stat-meta">Scale: 0.00 - 4.00</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-label">Avg. Study Time</div>
+    <div class="stat-value">{{ stats.avg_study_time }} <span style="font-size: 14px; font-weight: normal; color: var(--color-text-muted);">hrs/wk</span></div>
+    <div class="stat-meta">Weekly self-study</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-label">Avg. Absences</div>
+    <div class="stat-value">{{ stats.avg_absences }} <span style="font-size: 14px; font-weight: normal; color: var(--color-text-muted);">days</span></div>
+    <div class="stat-meta">Annual missed days</div>
+  </div>
+</div>
+
+<!-- Two-Column Section: Distribution Chart & Target Class Breakdown -->
+<div class="grid-2col">
+  <!-- Chart Card -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Class Distribution</div>
+      <div class="card-subtitle">Count of students per GradeClass</div>
+    </div>
+    <div class="card-body">
+      <div class="chart-box">
+        <canvas id="classDistChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Table Card: Class Breakdown -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Grade Class Reference</div>
+      <div class="card-subtitle">5 Target Classes (0=A to 4=F)</div>
+    </div>
+    <div class="card-body" style="padding: 0;">
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Class</th>
+              <th>Grade</th>
+              <th>Description</th>
+              <th>Students</th>
+              <th>Share</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in stats.class_distribution %}
+            <tr>
+              <td><span class="grade-badge grade-badge-{{ item.class_id }}">Class {{ item.class_id }}</span></td>
+              <td><strong>Grade {{ item.grade }}</strong></td>
+              <td style="color: var(--color-text-muted);">{{ GRADE_MAPPING[item.class_id].desc }}</td>
+              <td>{{ item.count }}</td>
+              <td>{{ item.percentage }}%</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Feature Dictionary Card -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">Evaluated Model Features</div>
+    <div class="card-subtitle">12 predictor attributes (StudentID and GPA excluded to prevent data leakage)</div>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>Type</th>
+            <th>Data Range / Values</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Age</strong></td>
+            <td>Integer</td>
+            <td>15 to 18</td>
+            <td>Student chronological age in years</td>
+          </tr>
+          <tr>
+            <td><strong>Gender</strong></td>
+            <td>Binary</td>
+            <td>0 = Female, 1 = Male</td>
+            <td>Recorded student gender</td>
+          </tr>
+          <tr>
+            <td><strong>Ethnicity</strong></td>
+            <td>Categorical</td>
+            <td>0 = Caucasian, 1 = African American, 2 = Asian, 3 = Other</td>
+            <td>Student ethnic classification</td>
+          </tr>
+          <tr>
+            <td><strong>ParentalEducation</strong></td>
+            <td>Ordinal</td>
+            <td>0 = None, 1 = High School, 2 = Some College, 3 = Bachelor's, 4 = Higher</td>
+            <td>Highest completed education level of parents</td>
+          </tr>
+          <tr>
+            <td><strong>StudyTimeWeekly</strong></td>
+            <td>Continuous</td>
+            <td>0.0 to 20.0 hours</td>
+            <td>Average hours spent studying per week</td>
+          </tr>
+          <tr>
+            <td><strong>Absences</strong></td>
+            <td>Integer</td>
+            <td>0 to 30 days</td>
+            <td>Number of school days absent</td>
+          </tr>
+          <tr>
+            <td><strong>Tutoring</strong></td>
+            <td>Binary</td>
+            <td>0 = No, 1 = Yes</td>
+            <td>Enrolled in formal academic tutoring</td>
+          </tr>
+          <tr>
+            <td><strong>ParentalSupport</strong></td>
+            <td>Ordinal</td>
+            <td>0 = None, 1 = Low, 2 = Moderate, 3 = High, 4 = Very High</td>
+            <td>Level of recorded parental engagement</td>
+          </tr>
+          <tr>
+            <td><strong>Extracurricular</strong></td>
+            <td>Binary</td>
+            <td>0 = No, 1 = Yes</td>
+            <td>Participation in clubs and school activities</td>
+          </tr>
+          <tr>
+            <td><strong>Sports</strong></td>
+            <td>Binary</td>
+            <td>0 = No, 1 = Yes</td>
+            <td>Participation in organized school athletics</td>
+          </tr>
+          <tr>
+            <td><strong>Music</strong></td>
+            <td>Binary</td>
+            <td>0 = No, 1 = Yes</td>
+            <td>Participation in musical programs</td>
+          </tr>
+          <tr>
+            <td><strong>Volunteering</strong></td>
+            <td>Binary</td>
+            <td>0 = No, 1 = Yes</td>
+            <td>Participation in community service</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Pass class distribution data to Chart.js
+  const classDistData = {{ stats.class_distribution | tojson }};
+  
+  document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('classDistChart');
+    if (!ctx) return;
+
+    const labels = classDistData.map(d => `Class ${d.class_id} (${d.grade})`);
+    const counts = classDistData.map(d => d.count);
+
+    // Blue monochrome shades for classes
+    const colors = ['#1F5FBF', '#3E7BCE', '#5E96DC', '#88B2E8', '#B3CEF2'];
+
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Students',
+          data: counts,
+          backgroundColor: colors,
+          borderColor: '#15468D',
+          borderWidth: 1,
+          borderRadius: 3
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const total = counts.reduce((a, b) => a + b, 0);
+                const pct = ((context.parsed.y / total) * 100).toFixed(1);
+                return `${context.parsed.y} students (${pct}%)`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { color: '#5A6A80', font: { family: 'Inter', size: 12 } }
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: '#E2E8F0' },
+            ticks: { color: '#5A6A80', font: { family: 'Inter', size: 11 } }
+          }
+        }
+      }
+    });
+  });
+</script>
+{% endblock %}

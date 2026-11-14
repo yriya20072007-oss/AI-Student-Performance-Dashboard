@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}Data Explorer - Student Performance Classifier{% endblock %}
+{% block breadcrumb %}Data Explorer{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Data Explorer</h1>
+  <div class="page-subtitle">Search, filter, sort, and inspect individual student records.</div>
+</div>
+
+<div class="card">
+  <!-- Filter Toolbar -->
+  <div class="filter-bar">
+    <div class="search-box">
+      <svg viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+      <input type="text" id="searchInput" class="filter-select search-input" placeholder="Search any field...">
+    </div>
+
+    <!-- Gender Filter -->
+    <div class="filter-group">
+      <label for="genderFilter" class="filter-label">Gender:</label>
+      <select id="genderFilter" class="filter-select">
+        <option value="">All</option>
+        <option value="0">Female (0)</option>
+        <option value="1">Male (1)</option>
+      </select>
+    </div>
+
+    <!-- Tutoring Filter -->
+    <div class="filter-group">
+      <label for="tutoringFilter" class="filter-label">Tutoring:</label>
+      <select id="tutoringFilter" class="filter-select">
+        <option value="">All</option>
+        <option value="1">Yes (1)</option>
+        <option value="0">No (0)</option>
+      </select>
+    </div>
+
+    <!-- Parental Support Filter -->
+    <div class="filter-group">
+      <label for="supportFilter" class="filter-label">Parental Support:</label>
+      <select id="supportFilter" class="filter-select">
+        <option value="">All</option>
+        <option value="0">None (0)</option>
+        <option value="1">Low (1)</option>
+        <option value="2">Moderate (2)</option>
+        <option value="3">High (3)</option>
+        <option value="4">Very High (4)</option>
+      </select>
+    </div>
+
+    <!-- Page Size -->
+    <div class="filter-group" style="margin-left: auto;">
+      <label for="pageSizeSelect" class="filter-label">Rows:</label>
+      <select id="pageSizeSelect" class="filter-select">
+        <option value="15">15</option>
+        <option value="25" selected>25</option>
+        <option value="50">50</option>
+        <option value="100">100</option>
+      </select>
+    </div>
+
+    <button type="button" id="resetFiltersBtn" class="btn btn-secondary btn-sm">Reset</button>
+  </div>
+
+  <!-- Table View -->
+  <div class="table-wrapper">
+    <table class="data-table" id="dataTable">
+      <thead>
+        <tr>
+          <th class="sortable" data-col="StudentID">Student ID <span class="sort-icon"></span></th>
+          <th class="sortable" data-col="Age">Age <span class="sort-icon"></span></th>
+          <th class="sortable" data-col="Gender">Gender <span class="sort-icon"></span></th>
+          <th class="sortable" data-col="Ethnicity">Ethnicity <span class="sort-icon"></span></th>
+          <th class="sortable" data-col="ParentalEducation">Parent Edu <span class="sort-icon"></span></th>
+          <th class="sortable" data-col="StudyTimeWeekly">Study Time (h) <span class="sort-icon"></span></th>
+          <th class="sortable" data-col="Absences">Absences <span class="sort-icon"></span></th>
+          <th class="sortable" data-col="Tutoring">Tutoring <span class="sort-icon"></span></th>
+          <th class="sortable" data-col="ParentalSupport">Support <span class="sort-icon"></span></th>
+          <th class="sortable" data-col="Extracurricular">Extra <span class="sort-icon"></span></th>
+          <th class="sortable" data-col="Sports">Sports <span class="sort-icon"></span></th>
+          <th class="sortable" data-col="Music">Music <span class="sort-icon"></span></th>
+          <th class="sortable" data-col="Volunteering">Volunt. <span class="sort-icon"></span></th>
+          <th class="sortable" data-col="GPA">GPA <span class="sort-icon"></span></th>
+          <th class="sortable" data-col="GradeClass">Grade Class <span class="sort-icon"></span></th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        <!-- Dynamically rendered rows -->
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination Bottom Bar -->
+  <div class="pagination-bar">
+    <div id="paginationInfo">Showing 0 to 0 of 0 entries</div>
+    <div class="pagination-controls">
+      <button class="btn btn-secondary btn-sm" id="firstPageBtn">First</button>
+      <button class="btn btn-secondary btn-sm" id="prevPageBtn">Prev</button>
+      <span style="padding: 4px 10px; font-weight: 500;" id="pageIndicator">Page 1 of 1</span>
+      <button class="btn btn-secondary btn-sm" id="nextPageBtn">Next</button>
+      <button class="btn btn-secondary btn-sm" id="lastPageBtn">Last</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/data_table.js') }}"></script>
+{% endblock %}

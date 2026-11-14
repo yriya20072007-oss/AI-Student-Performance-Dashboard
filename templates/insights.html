@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block title %}Insights - Student Performance Classifier{% endblock %}
+{% block breadcrumb %}Insights{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Exploratory Insights & Feature Relationships</h1>
+  <div class="page-subtitle">Analysis of academic predictors, attendance impact, and decision tree feature importances.</div>
+</div>
+
+<!-- Row 1: GradeClass vs Absences & GradeClass vs Study Time -->
+<div class="grid-2col">
+  <!-- Chart 1: GradeClass vs Absences -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">GradeClass vs. Absences</div>
+      <div class="card-subtitle">Mean days absent per grade class</div>
+    </div>
+    <div class="card-body">
+      <div class="chart-box">
+        <canvas id="absencesChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart 2: GradeClass vs Study Time -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">GradeClass vs. Study Time</div>
+      <div class="card-subtitle">Mean weekly study hours per grade class</div>
+    </div>
+    <div class="card-body">
+      <div class="chart-box">
+        <canvas id="studyTimeChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Row 2: Feature Importance Bar Chart -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">Decision Tree Feature Importance</div>
+    <div class="card-subtitle">Relative Gini importance of the 12 input features</div>
+  </div>
+  <div class="card-body">
+    <div class="chart-box chart-box-tall">
+      <canvas id="featureImportanceChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Row 3: Correlation Matrix Heatmap -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">Correlation Heatmap</div>
+    <div class="card-subtitle">Pearson correlation coefficients between numerical attributes and grade outcomes</div>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    <div class="table-wrapper">
+      <table class="corr-table" id="corrTable">
+        <thead>
+          <tr>
+            <th>Feature</th>
+            {% for col in correlation_matrix.columns %}
+            <th>{{ col }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row_name in correlation_matrix.columns %}
+          {% set row_idx = loop.index0 %}
+          <tr>
+            <td class="header-col">{{ row_name }}</td>
+            {% for col_name in correlation_matrix.columns %}
+            {% set col_idx = loop.index0 %}
+            {% set val = correlation_matrix.matrix[row_idx][col_idx] %}
+            <td class="corr-cell" data-val="{{ val }}">{{ val }}</td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const insightsData = {{ insights | tojson }};
+  const featureImpData = {{ feature_importance | tojson }};
+
+  document.addEventListener('DOMContentLoaded', function() {
+    // 1. Absences by Grade Class
+    const ctxAbs = document.getElementById('absencesChart');
+    if (ctxAbs) {
+      new Chart(ctxAbs, {
+        type: 'bar',
+        data: {
+          labels: insightsData.grade_vs_absences.map(d => d.grade),
+          datasets: [{
+            label: 'Avg. Absences (Days)',
+            data: insightsData.grade_vs_absences.map(d => d.mean),
+            backgroundColor: '#1F5FBF',
+            borderRadius: 3,
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: ctx => `${ctx.parsed.y} days absent on average`
+              }
+            }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: '#5A6A80' } },
+            y: {
+              beginAtZero: true,
+              grid: { color: '#E2E8F0' },
+              ticks: { color: '#5A6A80' },
+              title: { display: true, text: 'Days Absent', color: '#5A6A80' }
+            }
+          }
+        }
+      });
+    }
+
+    // 2. Study Time by Grade Class
+    const ctxStudy = document.getElementById('studyTimeChart');
+    if (ctxStudy) {
+      new Chart(ctxStudy, {
+        type: 'bar',
+        data: {
+          labels: insightsData.grade_vs_study_time.map(d => d.grade),
+          datasets: [{
+            label: 'Avg. Weekly Study (Hours)',
+            data: insightsData.grade_vs_study_time.map(d => d.mean),
+            backgroundColor: '#3E7BCE',
+            borderRadius: 3,
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: ctx => `${ctx.parsed.y} hours/week on average`
+              }
+            }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: '#5A6A80' } },
+            y: {
+              beginAtZero: true,
+              grid: { color: '#E2E8F0' },
+              ticks: { color: '#5A6A80' },
+              title: { display: true, text: 'Weekly Study Hours', color: '#5A6A80' }
+            }
+          }
+        }
+      });
+    }
+
+    // 3. Feature Importance Horizontal Bar Chart
+    const ctxImp = document.getElementById('featureImportanceChart');
+    if (ctxImp) {
+      // Sort features ascending for horizontal bar (top feature at top)
+      const sortedImp = [...featureImpData].reverse();
+
+      new Chart(ctxImp, {
+        type: 'bar',
+        data: {
+          labels: sortedImp.map(d => d.feature),
+          datasets: [{
+            label: 'Gini Importance',
+            data: sortedImp.map(d => (d.importance * 100).toFixed(2)),
+            backgroundColor: '#1F5FBF',
+            borderRadius: 3,
+            borderWidth: 0
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: ctx => `${ctx.parsed.x}% relative importance`
+              }
+            }
+          },
+          scales: {
+            x: {
+              beginAtZero: true,
+              grid: { color: '#E2E8F0' },
+              ticks: {
+                color: '#5A6A80',
+                callback: val => val + '%'
+              },
+              title: { display: true, text: 'Feature Importance (%)', color: '#5A6A80' }
+            },
+            y: { grid: { display: false }, ticks: { color: '#1A2638', font: { weight: '500' } } }
+          }
+        }
+      });
+    }
+
+    // 4. Style Correlation Matrix Heatmap Cells with soft blue intensity
+    document.querySelectorAll('.corr-cell').forEach(cell => {
+      const val = parseFloat(cell.getAttribute('data-val'));
+      if (isNaN(val)) return;
+
+      // Color intensity based on positive or negative correlation
+      if (val >= 0) {
+        // Soft positive blue shades
+        const alpha = Math.min(0.85, Math.abs(val) * 0.85);
+        cell.style.backgroundColor = `rgba(31, 95, 191, ${alpha.toFixed(2)})`;
+        if (alpha > 0.45) cell.style.color = '#FFFFFF';
+      } else {
+        // Soft negative slate-blue shades
+        const alpha = Math.min(0.85, Math.abs(val) * 0.85);
+        cell.style.backgroundColor = `rgba(186, 60, 60, ${alpha.toFixed(2)})`;
+        if (alpha > 0.45) cell.style.color = '#FFFFFF';
+      }
+    });
+  });
+</script>
+{% endblock %}

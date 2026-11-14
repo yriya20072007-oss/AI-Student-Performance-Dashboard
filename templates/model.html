@@ -1,0 +1,307 @@
+{% extends "base.html" %}
+
+{% block title %}Model Performance - Student Performance Classifier{% endblock %}
+{% block breadcrumb %}Model Performance{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Decision Tree Evaluation & Metrics</h1>
+  <div class="page-subtitle">Standardized 10-fold cross-validation and test set evaluation across 7 key classification metrics.</div>
+</div>
+
+<!-- 7 Metric Cards Row -->
+<div class="metrics-row">
+  <div class="metric-card">
+    <div class="metric-name">Accuracy</div>
+    <div class="metric-val">{{ "%.2f"|format(metrics.accuracy * 100) }}%</div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-name">Cohen's Kappa</div>
+    <div class="metric-val">{{ "%.4f"|format(metrics.kappa) }}</div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-name">Macro Precision</div>
+    <div class="metric-val">{{ "%.4f"|format(metrics.precision) }}</div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-name">Macro Recall</div>
+    <div class="metric-val">{{ "%.4f"|format(metrics.recall) }}</div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-name">Macro F1</div>
+    <div class="metric-val">{{ "%.4f"|format(metrics.f1) }}</div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-name">ROC-AUC (OvR)</div>
+    <div class="metric-val">{{ "%.4f"|format(metrics.roc_auc) }}</div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-name">MCC</div>
+    <div class="metric-val">{{ "%.4f"|format(metrics.mcc) }}</div>
+  </div>
+</div>
+
+<!-- Row 1: Confusion Matrix & ROC Curve -->
+<div class="grid-2col">
+  <!-- Confusion Matrix Heatmap Card -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Confusion Matrix Heatmap</div>
+      <div class="card-subtitle">Actual vs. Predicted classes on test set (N = {{ test_size }})</div>
+    </div>
+    <div class="card-body">
+      <div class="matrix-container">
+        <table class="matrix-table" id="confusionMatrixTable">
+          <thead>
+            <tr>
+              <th rowspan="2" style="vertical-align: bottom;">Actual Class</th>
+              <th colspan="5" style="border-bottom: 2px solid var(--color-border);">Predicted Class</th>
+            </tr>
+            <tr>
+              <th>Class 0 (A)</th>
+              <th>Class 1 (B)</th>
+              <th>Class 2 (C)</th>
+              <th>Class 3 (D)</th>
+              <th>Class 4 (F)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in confusion_matrix %}
+            {% set actual_class = loop.index0 %}
+            <tr>
+              <th>Class {{ actual_class }} ({{ GRADE_MAPPING[actual_class].letter }})</th>
+              {% for count in row %}
+              {% set pred_class = loop.index0 %}
+              <td class="matrix-cell" data-count="{{ count }}" data-actual="{{ actual_class }}" data-pred="{{ pred_class }}">
+                {{ count }}
+              </td>
+              {% endfor %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div style="font-size: 11.5px; color: var(--color-text-muted); margin-top: 12px; text-align: center;">
+        Diagonal cells indicate correctly classified instances. Color intensity reflects frequency.
+      </div>
+    </div>
+  </div>
+
+  <!-- Multiclass OvR ROC Curve Card -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Multiclass OvR ROC Curve</div>
+      <div class="card-subtitle">One-vs-Rest true positive vs. false positive rate per class</div>
+    </div>
+    <div class="card-body">
+      <div class="chart-box">
+        <canvas id="rocCurveChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Row 2: 10-Fold Cross-Validation Scores -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">10-Fold Stratified Cross-Validation Accuracy</div>
+    <div class="card-subtitle">Mean Accuracy: {{ "%.2f"|format(cv_summary.mean * 100) }}% ± {{ "%.2f"|format(cv_summary.std * 100) }}% (Training set N = {{ train_size }})</div>
+  </div>
+  <div class="card-body">
+    <div class="chart-box">
+      <canvas id="cvScoresChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Row 3: Pipeline Methodology Card -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">Training Pipeline & Architecture</div>
+    <div class="card-subtitle">Methodology matching the student experiment notebook</div>
+  </div>
+  <div class="card-body">
+    <div style="font-size: 13px; color: var(--color-text-main); line-height: 1.6;">
+      <p style="margin-bottom: 8px;">
+        <strong>1. Train/Test Split:</strong> The dataset of 2,392 records was split using an 80/20 stratified split (1,913 training, 479 test samples, <code>random_state=42</code>) to preserve the original class imbalance across folds.
+      </p>
+      <p style="margin-bottom: 8px;">
+        <strong>2. Feature Scaling:</strong> Standard scaling (<code>StandardScaler</code>) was fitted strictly on training features and subsequently transformed on test sets to eliminate data snooping.
+      </p>
+      <p style="margin-bottom: 8px;">
+        <strong>3. Target & Feature Isolation:</strong> <code>StudentID</code> and <code>GPA</code> were dropped. <code>GPA</code> is a deterministic source of <code>GradeClass</code>; removing it is essential to prevent target leakage and measure authentic predictive capacity.
+      </p>
+      <p>
+        <strong>4. Classifier:</strong> <code>DecisionTreeClassifier</code> evaluated via 10-fold <code>StratifiedKFold</code> cross-validation. The model is trained once at application boot and cached in memory for sub-millisecond inference.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const rocData = {{ roc_data | tojson }};
+  const cvSummary = {{ cv_summary | tojson }};
+
+  document.addEventListener('DOMContentLoaded', function() {
+    // 1. Color Confusion Matrix Cells with shades of blue
+    const cells = document.querySelectorAll('.matrix-cell');
+    let maxCount = 0;
+    cells.forEach(c => {
+      const cnt = parseInt(c.getAttribute('data-count'), 10) || 0;
+      if (cnt > maxCount) maxCount = cnt;
+    });
+
+    cells.forEach(c => {
+      const cnt = parseInt(c.getAttribute('data-count'), 10) || 0;
+      const actual = c.getAttribute('data-actual');
+      const pred = c.getAttribute('data-pred');
+      const ratio = maxCount > 0 ? cnt / maxCount : 0;
+      
+      if (actual === pred) {
+        // True positives: deeper solid blue
+        const alpha = Math.max(0.12, ratio * 0.85);
+        c.style.backgroundColor = `rgba(31, 95, 191, ${alpha.toFixed(2)})`;
+        if (alpha > 0.45) c.style.color = '#FFFFFF';
+      } else if (cnt > 0) {
+        // Off-diagonal misclassifications: soft light blue-gray
+        const alpha = Math.max(0.06, ratio * 0.45);
+        c.style.backgroundColor = `rgba(31, 95, 191, ${alpha.toFixed(2)})`;
+      } else {
+        c.style.backgroundColor = '#FFFFFF';
+      }
+    });
+
+    // 2. Multiclass OvR ROC Curve
+    const ctxRoc = document.getElementById('rocCurveChart');
+    if (ctxRoc) {
+      const palette = ['#1F5FBF', '#3E7BCE', '#5E96DC', '#88B2E8', '#4B77BE'];
+      const datasets = [];
+
+      for (let i = 0; i < 5; i++) {
+        const item = rocData[String(i)];
+        if (item) {
+          datasets.push({
+            label: `${item.label} (AUC = ${item.auc})`,
+            data: item.points,
+            borderColor: palette[i],
+            backgroundColor: palette[i],
+            borderWidth: 2,
+            fill: false,
+            tension: 0.1,
+            pointRadius: 3,
+            pointHoverRadius: 5
+          });
+        }
+      }
+
+      // Add baseline diagonal
+      datasets.push({
+        label: 'Random Chance (AUC = 0.50)',
+        data: [{x: 0, y: 0}, {x: 1, y: 1}],
+        borderColor: '#94A3B8',
+        borderWidth: 1.5,
+        borderDash: [5, 5],
+        pointRadius: 0,
+        fill: false
+      });
+
+      new Chart(ctxRoc, {
+        type: 'line',
+        data: { datasets: datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                boxWidth: 12,
+                font: { family: 'Inter', size: 11 },
+                color: '#5A6A80'
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: ctx => `${ctx.dataset.label}: FPR=${ctx.parsed.x}, TPR=${ctx.parsed.y}`
+              }
+            }
+          },
+          scales: {
+            x: {
+              type: 'linear',
+              min: 0,
+              max: 1.0,
+              grid: { color: '#E2E8F0' },
+              title: { display: true, text: 'False Positive Rate (FPR)', color: '#5A6A80' },
+              ticks: { color: '#5A6A80' }
+            },
+            y: {
+              type: 'linear',
+              min: 0,
+              max: 1.05,
+              grid: { color: '#E2E8F0' },
+              title: { display: true, text: 'True Positive Rate (TPR)', color: '#5A6A80' },
+              ticks: { color: '#5A6A80' }
+            }
+          }
+        }
+      });
+    }
+
+    // 3. 10-Fold CV Scores
+    const ctxCv = document.getElementById('cvScoresChart');
+    if (ctxCv) {
+      const foldLabels = cvSummary.folds.map((_, idx) => `Fold ${idx + 1}`);
+      const foldPercentages = cvSummary.folds.map(v => (v * 100).toFixed(2));
+      const meanPct = (cvSummary.mean * 100).toFixed(2);
+
+      new Chart(ctxCv, {
+        type: 'bar',
+        data: {
+          labels: foldLabels,
+          datasets: [{
+            label: 'Accuracy (%)',
+            data: foldPercentages,
+            backgroundColor: '#1F5FBF',
+            borderRadius: 3,
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: ctx => `Fold Accuracy: ${ctx.parsed.y}%`
+              }
+            }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: '#5A6A80' } },
+            y: {
+              min: 40,
+              max: 80,
+              grid: { color: '#E2E8F0' },
+              ticks: {
+                color: '#5A6A80',
+                callback: val => val + '%'
+              },
+              title: { display: true, text: 'Accuracy (%)', color: '#5A6A80' }
+            }
+          }
+        }
+      });
+    }
+  });
+</script>
+{% endblock %}
